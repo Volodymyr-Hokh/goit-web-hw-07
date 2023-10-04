@@ -1,34 +1,32 @@
 from datetime import datetime, timedelta
-import re
 from random import randint
+import re
 
 import faker
-import psycopg2
 
+from connect_db import session
+from models import Group, Teacher, Subject, Student, Grade
 
 NUMBER_OF_TEACHERS = 4
 NUMBER_OF_STUDENTS = 50
-DBNAME = 'postgres'
-USER = 'postgres'
-PASSWORD = 'postgres'
-HOST = 'localhost'
 
 fake = faker.Faker('uk-UA')
 
 
-def seed_groups(cursor):
+def seed_groups():
     groups = [('ФБСст-41',), ('МЗЕД-11',), ('ПТБД-42',)]
-    cursor.executemany('INSERT INTO groups (group_name) VALUES (%s)', groups)
+    for group in groups:
+        session.add(Group(group_name=group))
 
 
-def seed_teachers(cursor):
+def seed_teachers():
     teachers = [(re.sub(r'^пані? ', '', fake.name()),)
                 for _ in range(NUMBER_OF_TEACHERS)]
-    cursor.executemany(
-        'INSERT INTO teachers (teacher_full_name) VALUES (%s)', teachers)
+    for teacher in teachers:
+        session.add(Teacher(teacher_full_name=teacher))
 
 
-def seed_subjects(cursor):
+def seed_subjects():
     subjects = [
         ('Вища математика', randint(1, NUMBER_OF_TEACHERS)),
         ('Англійська мова', randint(1, NUMBER_OF_TEACHERS)),
@@ -38,51 +36,42 @@ def seed_subjects(cursor):
         ('Програмування', randint(1, NUMBER_OF_TEACHERS)),
         ('Маркетинг', randint(1, NUMBER_OF_TEACHERS)),
     ]
-    cursor.executemany(
-        'INSERT INTO subjects (subject_name, teacher_id) VALUES (%s, %s)', subjects)
+    for subject in subjects:
+        session.add(Subject(subject_name=subject[0],
+                    teacher_id=subject[1]))
 
 
-def seed_students(cursor):
+def seed_students():
     students = [
         (re.sub(r'^пані? ', '', fake.name()), randint(1, 3))
         for _ in range(NUMBER_OF_STUDENTS)
     ]
 
-    cursor.executemany(
-        'INSERT INTO students (student_full_name, group_id) VALUES (%s, %s)', students)
+    for student in students:
+        session.add(Student(student_full_name=student[0],
+                    group_id=student[1]))
 
 
-def seed_grades(cursor):
+def seed_grades():
     grades = [
-        (randint(1, 50), randint(1, 5), randint(1, 100),
+        (randint(1, NUMBER_OF_STUDENTS), randint(1, 5), randint(1, 100),
          (datetime(2023, 1, 1) + timedelta(days=randint(0, 364))).strftime('%Y-%m-%d'))
         for _ in range(1000)
     ]
 
-    cursor.executemany(
-        'INSERT INTO grades (student_id, subject_id, grade, date) VALUES (%s, %s, %s, %s)', grades)
+    for grade in grades:
+        session.add(
+            Grade(student_id=grade[0], subject_id=grade[1], grade=grade[2], date=grade[3]))
 
 
 def main():
-    try:
-        conn = psycopg2.connect(
-            dbname=DBNAME, user=USER, password=PASSWORD, host=HOST)
-        cursor = conn.cursor()
+    seed_groups()
+    seed_teachers()
+    seed_subjects()
+    seed_students()
+    seed_grades()
 
-        seed_groups(cursor)
-        seed_teachers(cursor)
-        seed_subjects(cursor)
-        seed_students(cursor)
-        seed_grades(cursor)
-
-        conn.commit()
-
-    except Exception as e:
-        print(f"Connection error: {e}")
-    finally:
-        if conn:
-            cursor.close()
-            conn.close()
+    session.commit()
 
 
 if __name__ == '__main__':
