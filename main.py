@@ -24,9 +24,10 @@ parser.add_argument('--id', help='Enter id', default=argparse.SUPPRESS)
 
 def create(**kwargs):
     model = kwargs.pop('model', None)
+    model = model.lower() or None
     if model not in MODELS.keys():
         raise ValueError('Unknown model. Please try again.')
-    model = model.lower()
+
     new_object = MODELS[model](**kwargs)
     session.add(new_object)
     return 'The operation is successful'
@@ -34,17 +35,17 @@ def create(**kwargs):
 
 def list_handler(**kwargs):
     model = kwargs.pop('model', None)
+    model = model.lower() or None
     if model not in MODELS.keys():
         raise ValueError('Unknown model. Please try again.')
-    model = model.lower()
     return session.query(*MODELS[model].__table__.columns).select_from(MODELS[model]).all()
 
 
 def update(**kwargs):
     model = kwargs.pop('model', None)
+    model = model.lower() or None
     if model not in MODELS.keys():
         raise ValueError('Unknown model. Please try again.')
-    model = model.lower()
     to_edit = session.query(MODELS[model]).filter_by(
         id=kwargs['id']).first()
     to_edit.name = kwargs['name']
@@ -53,9 +54,9 @@ def update(**kwargs):
 
 def remove(**kwargs):
     model = kwargs.pop('model', None)
+    model = model.lower() or None
     if model not in MODELS.keys():
         raise ValueError('Unknown model. Please try again.')
-    model = model.lower()
     to_delete = session.query(MODELS[model]).filter_by(
         id=kwargs['id']).first()
     session.delete(to_delete)
